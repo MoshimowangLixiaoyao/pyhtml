@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学生随机排座位系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+  <!-- Tailwind配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            secondary: '#36CFC9',
+            accent: '#FF7D00',
+            group1: '#4E72B7',
+            group2: '#55A868',
+            group3: '#C44E52',
+            light: '#F5F7FA',
+            dark: '#1D2129'
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .seat-shadow {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+      .group-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+      .group-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+      .animate-seat {
+        animation: seatAppear 0.5s ease forwards;
+      }
+      @keyframes seatAppear {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+    }
+  </style>
+</head>
+<body class="font-inter bg-gray-50 text-dark min-h-screen">
+  <!-- 顶部导航 -->
+  <header class="bg-white shadow-sm sticky top-0 z-50 transition-all duration-300">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <i class="fa fa-graduation-cap text-primary text-2xl"></i>
+        <h1 class="text-[clamp(1.25rem,3vw,1.75rem)] font-bold text-primary">学生座位排列系统</h1>
+      </div>
+      <div class="hidden md:flex items-center space-x-4">
+        <button id="infoBtn" class="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-info-circle"></i>
+          <span>使用说明</span>
+        </button>
+        <button id="refreshBtn" class="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-refresh"></i>
+          <span>重置</span>
+        </button>
+      </div>
+      <button class="md:hidden text-primary text-xl" id="mobileMenuBtn">
+        <i class="fa fa-bars"></i>
+      </button>
+    </div>
+    <!-- 移动端菜单 -->
+    <div id="mobileMenu" class="hidden md:hidden bg-white border-t">
+      <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+        <button id="mobileInfoBtn" class="flex items-center space-x-2 py-2 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-info-circle"></i>
+          <span>使用说明</span>
+        </button>
+        <button id="mobileRefreshBtn" class="flex items-center space-x-2 py-2 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-refresh"></i>
+          <span>重置</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main class="container mx-auto px-4 py-8">
+    <!-- 控制面板 -->
+    <section class="bg-white rounded-xl shadow-md p-6 mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div>
+          <h2 class="text-xl font-semibold mb-2">学生名单</h2>
+<!--          <p class="text-gray-500 text-sm">共 <span id="totalStudents" class="font-medium text-primary">24</span> 名学生</p>-->
+        </div>
+        <button id="arrangeBtn" class="bg-primary hover:bg-primary/90 text-white font-medium py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center space-x-2 transform hover:-translate-y-1">
+          <i class="fa fa-random"></i>
+          <span>随机排座位</span>
+        </button>
+      </div>
+
+      <!-- 学生列表 -->
+      <div class="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">林芷渲</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">龚世杰</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">林希</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">方梓晨</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">李艾丽西亚</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">黄怡菲</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">杜紫英</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">周黎凯</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">黄梓琳</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">李煜麒</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">朱视娜</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">陈昕妤</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">吴子怡</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">王索菲娅</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">胡语彤</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">施俊怡</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">王乐权</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">黄琦彬</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">李俊航</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">翁沛珊</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">李欣妍</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">吴欣汝</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">王梓涵</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors"> </div>
+      </div>
+    </section>
+
+    <!-- 座位展示区 -->
+    <section class="mb-8">
+      <h2 class="text-xl font-semibold mb-6 text-center">座位安排</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- 第一组 -->
+        <div class="group-card bg-white rounded-xl shadow-md overflow-hidden">
+          <div class="bg-group1 text-white p-4">
+            <h3 class="font-bold text-lg flex items-center">
+              <i class="fa fa-users mr-2"></i>第一组
+            </h3>
+          </div>
+          <div class="p-4">
+            <div class="text-center mb-4 text-gray-500 text-sm">讲台</div>
+            <div id="group1" class="space-y-4">
+              <!-- 座位将通过JS动态生成 -->
+              <div class="flex justify-center items-center h-40 bg-gray-100 rounded-lg text-gray-400">
+                <i class="fa fa-arrow-up mr-2"></i>点击随机排座位
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 第二组 -->
+        <div class="group-card bg-white rounded-xl shadow-md overflow-hidden">
+          <div class="bg-group2 text-white p-4">
+            <h3 class="font-bold text-lg flex items-center">
+              <i class="fa fa-users mr-2"></i>第二组
+            </h3>
+          </div>
+          <div class="p-4">
+            <div class="text-center mb-4 text-gray-500 text-sm">讲台</div>
+            <div id="group2" class="space-y-4">
+              <!-- 座位将通过JS动态生成 -->
+              <div class="flex justify-center items-center h-40 bg-gray-100 rounded-lg text-gray-400">
+                <i class="fa fa-arrow-up mr-2"></i>点击随机排座位
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 第三组 -->
+        <div class="group-card bg-white rounded-xl shadow-md overflow-hidden">
+          <div class="bg-group3 text-white p-4">
+            <h3 class="font-bold text-lg flex items-center">
+              <i class="fa fa-users mr-2"></i>第三组
+            </h3>
+          </div>
+          <div class="p-4">
+            <div class="text-center mb-4 text-gray-500 text-sm">讲台</div>
+            <div id="group3" class="space-y-4">
+              <!-- 座位将通过JS动态生成 -->
+              <div class="flex justify-center items-center h-40 bg-gray-100 rounded-lg text-gray-400">
+                <i class="fa fa-arrow-up mr-2"></i>点击随机排座位
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 操作反馈区 -->
+    <div id="notification" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-dark text-white px-6 py-3 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 flex items-center space-x-2">
+      <i class="fa fa-check-circle text-green-400"></i>
+      <span>座位已随机安排完成</span>
+    </div>
+  </main>
+
+  <!-- 使用说明模态框 -->
+  <div id="infoModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-white rounded-xl max-w-md w-full mx-4 p-6 transform scale-95 transition-transform duration-300">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold text-primary">使用说明</h3>
+        <button id="closeInfoBtn" class="text-gray-500 hover:text-gray-700">
+          <i class="fa fa-times text-xl"></i>
+        </button>
+      </div>
+      <div class="space-y-3 text-gray-700">
+        <p>1. 系统包含24个座位，将随机分配3个组</p>
+        <p>2. 每组8名学生，分为4行，每行2人</p>
+        <p>3. 点击"随机排座位"按钮进行座位分配</p>
+        <p>4. 座位安排遵循"尽可能往前坐"原则</p>
+        <p>5. 点击"重置"按钮可重新开始分配</p>
+      </div>
+      <div class="mt-6 text-center">
+        <button id="confirmInfoBtn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+          我知道了
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 页脚 -->
+  <footer class="bg-white border-t py-6">
+    <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+      <p>学生座位排列系统 &copy; switch cin 2025</p>
+    </div>
+  </footer>
+
+  <script>
+    // 学生数据
+    const students = [
+      "林芷渲", "龚世杰", "林希", "方梓晨", "李艾丽西亚", "黄怡菲",
+      "杜紫英", "周黎凯", "黄梓琳", "李煜麒", "朱视娜", "陈昕妤",
+      "吴子怡", "王索菲娅", "胡语彤", "施俊怡", "王乐权", "黄琦彬",
+      "李俊航", "翁沛珊", "李欣妍", "关欣汝", "王梓涵", " "
+    ];
+
+    // DOM元素
+    const arrangeBtn = document.getElementById('arrangeBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const mobileRefreshBtn = document.getElementById('mobileRefreshBtn');
+    const infoBtn = document.getElementById('infoBtn');
+    const mobileInfoBtn = document.getElementById('mobileInfoBtn');
+    const infoModal = document.getElementById('infoModal');
+    const closeInfoBtn = document.getElementById('closeInfoBtn');
+    const confirmInfoBtn = document.getElementById('confirmInfoBtn');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const notification = document.getElementById('notification');
+
+    // 组容器
+    const group1 = document.getElementById('group1');
+    const group2 = document.getElementById('group2');
+    const group3 = document.getElementById('group3');
+
+    // 移动端菜单切换
+    mobileMenuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+
+    // 显示使用说明
+    function showInfoModal() {
+      infoModal.classList.remove('opacity-0', 'pointer-events-none');
+      infoModal.querySelector('div').classList.remove('scale-95');
+      infoModal.querySelector('div').classList.add('scale-100');
+    }
+
+    // 隐藏使用说明
+    function hideInfoModal() {
+      infoModal.classList.add('opacity-0', 'pointer-events-none');
+      infoModal.querySelector('div').classList.remove('scale-100');
+      infoModal.querySelector('div').classList.add('scale-95');
+    }
+
+    infoBtn.addEventListener('click', showInfoModal);
+    mobileInfoBtn.addEventListener('click', () => {
+      showInfoModal();
+      mobileMenu.classList.add('hidden');
+    });
+    closeInfoBtn.addEventListener('click', hideInfoModal);
+    confirmInfoBtn.addEventListener('click', hideInfoModal);
+
+    // 随机打乱数组顺序
+    function shuffleArray(array) {
+      const newArray = [...array];
+      for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+      }
+      return newArray;
+    }
+
+    // 分配座位
+    function arrangeSeats() {
+      // 打乱学生顺序
+      const shuffledStudents = shuffleArray(students);
+
+      // 分成3组，每组8人
+      const groups = [
+        shuffledStudents.slice(0, 8),
+        shuffledStudents.slice(8, 16),
+        shuffledStudents.slice(16, 24)
+      ];
+
+      // 清空现有座位
+      group1.innerHTML = '';
+      group2.innerHTML = '';
+      group3.innerHTML = '';
+
+      // 为每个组创建座位
+      groups.forEach((group, index) => {
+        const groupElement = index === 0 ? group1 : index === 1 ? group2 : group3;
+        const groupColor = index === 0 ? 'group1' : index === 1 ? 'group2' : 'group3';
+
+        // 每组4行，每行2人
+        for (let i = 0; i < 4; i++) {
+          const row = document.createElement('div');
+          row.className = 'flex justify-center gap-4';
+
+          // 每行的两个学生
+          for (let j = 0; j < 2; j++) {
+            const studentIndex = i * 2 + j;
+            if (studentIndex < group.length) {
+              const seat = document.createElement('div');
+              seat.className = `seat-shadow animate-seat bg-${groupColor}/10 border border-${groupColor}/30 text-${groupColor} rounded-lg p-3 w-full text-center font-medium transition-all duration-300 hover:bg-${groupColor}/20`;
+              seat.textContent = group[studentIndex];
+              row.appendChild(seat);
+
+              // 添加延迟动画效果，使座位逐个显示
+              seat.style.animationDelay = `${(i * 2 + j) * 100}ms`;
+            }
+          }
+
+          groupElement.appendChild(row);
+        }
+      });
+
+      // 显示通知
+      showNotification('座位已随机安排完成');
+
+      // 按钮状态变化
+      arrangeBtn.disabled = true;
+      arrangeBtn.classList.add('opacity-70', 'cursor-not-allowed');
+      arrangeBtn.innerHTML = '<i class="fa fa-check"></i><span>已安排座位</span>';
+    }
+
+    // 重置功能
+    function resetSeats() {
+      // 重置组容器
+      const placeholder = `
+        <div class="flex justify-center items-center h-40 bg-gray-100 rounded-lg text-gray-400">
+          <i class="fa fa-arrow-up mr-2"></i>点击随机排座位
+        </div>
+      `;
+
+      group1.innerHTML = placeholder;
+      group2.innerHTML = placeholder;
+      group3.innerHTML = placeholder;
+
+      // 重置按钮状态
+      arrangeBtn.disabled = false;
+      arrangeBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+      arrangeBtn.innerHTML = '<i class="fa fa-random"></i><span>随机排座位</span>';
+
+      showNotification('已重置，可以重新安排座位');
+    }
+
+    // 显示通知
+    function showNotification(message) {
+      const notificationEl = document.getElementById('notification');
+      notificationEl.querySelector('span').textContent = message;
+      notificationEl.classList.remove('opacity-0');
+
+      setTimeout(() => {
+        notificationEl.classList.add('opacity-0');
+      }, 3000);
+    }
+
+    // 事件监听
+    arrangeBtn.addEventListener('click', arrangeSeats);
+    refreshBtn.addEventListener('click', resetSeats);
+    mobileRefreshBtn.addEventListener('click', () => {
+      resetSeats();
+      mobileMenu.classList.add('hidden');
+    });
+
+    // 页面加载时显示使用说明
+    window.addEventListener('load', () => {
+      setTimeout(showInfoModal, 500);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学生随机排座位系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+  <!-- Tailwind配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            secondary: '#36CFC9',
+            accent: '#FF7D00',
+            group1: '#4E72B7',
+            group2: '#55A868',
+            group3: '#C44E52',
+            light: '#F5F7FA',
+            dark: '#1D2129',
+            fixed: '#9370DB'
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .seat-shadow {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+      .group-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+      .group-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+      .animate-seat {
+        animation: seatAppear 0.5s ease forwards;
+      }
+      @keyframes seatAppear {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      .fixed-seat-indicator {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: theme('colors.fixed');
+      }
+      .seat-number {
+        font-size: 10px;
+        color: rgba(0,0,0,0.3);
+        position: absolute;
+        top: 2px;
+        left: 2px;
+      }
+    }
+  </style>
+</head>
+<body class="font-inter bg-gray-50 text-dark min-h-screen">
+  <!-- 顶部导航 -->
+  <header class="bg-white shadow-sm sticky top-0 z-50 transition-all duration-300">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <i class="fa fa-graduation-cap text-primary text-2xl"></i>
+        <h1 class="text-[clamp(1.25rem,3vw,1.75rem)] font-bold text-primary">学生座位排列系统</h1>
+      </div>
+      <div class="hidden md:flex items-center space-x-4">
+        <button id="importBtn" class="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-upload"></i>
+          <span>导入名单</span>
+        </button>
+        <button id="exportBtn" class="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-download"></i>
+          <span>导出座位</span>
+        </button>
+        <button id="infoBtn" class="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-info-circle"></i>
+          <span>使用说明</span>
+        </button>
+        <button id="refreshBtn" class="flex items-center space-x-1 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-refresh"></i>
+          <span>重置</span>
+        </button>
+      </div>
+      <button class="md:hidden text-primary text-xl" id="mobileMenuBtn">
+        <i class="fa fa-bars"></i>
+      </button>
+    </div>
+    <!-- 移动端菜单 -->
+    <div id="mobileMenu" class="hidden md:hidden bg-white border-t">
+      <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+        <button id="mobileImportBtn" class="flex items-center space-x-2 py-2 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-upload"></i>
+          <span>导入名单</span>
+        </button>
+        <button id="mobileExportBtn" class="flex items-center space-x-2 py-2 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-download"></i>
+          <span>导出座位</span>
+        </button>
+        <button id="mobileInfoBtn" class="flex items-center space-x-2 py-2 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-info-circle"></i>
+          <span>使用说明</span>
+        </button>
+        <button id="mobileRefreshBtn" class="flex items-center space-x-2 py-2 text-gray-600 hover:text-primary transition-colors">
+          <i class="fa fa-refresh"></i>
+          <span>重置</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main class="container mx-auto px-4 py-8">
+    <!-- 控制面板 -->
+    <section class="bg-white rounded-xl shadow-md p-6 mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div>
+          <h2 class="text-xl font-semibold mb-2">学生名单</h2>
+          <p class="text-gray-500 text-sm">共 <span id="totalStudents" class="font-medium text-primary">23</span> 名学生 | 总座位数: 24</p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <label for="fileImport" class="cursor-pointer bg-secondary hover:bg-secondary/90 text-white font-medium py-3 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center space-x-2 transform hover:-translate-y-1">
+            <i class="fa fa-file-text-o"></i>
+            <span>导入名单</span>
+            <input id="fileImport" type="file" accept=".txt,.csv" class="hidden">
+          </label>
+          <button id="arrangeBtn" class="bg-primary hover:bg-primary/90 text-white font-medium py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 flex items-center space-x-2 transform hover:-translate-y-1">
+            <i class="fa fa-random"></i>
+            <span>随机排座位</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 学生列表 -->
+      <div class="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">林芷渲</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">龚世杰</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">林希</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">方梓晨</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">李艾丽西亚</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">黄怡菲</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">杜紫英</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">周黎凯</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">黄梓琳</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">李煜麒</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">朱视娜</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">陈昕妤</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">吴子怡</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">王索菲娅</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">胡语彤</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">施俊怡</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">王乐权</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">黄琦彬</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">李俊航</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">翁沛珊</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">李欣妍</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">关欣汝</div>
+        <div class="student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors">王梓涵</div>
+      </div>
+    </section>
+
+    <!-- 座位展示区 -->
+    <section class="mb-8">
+      <h2 class="text-xl font-semibold mb-6 text-center">座位安排</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- 第一组 -->
+        <div class="group-card bg-white rounded-xl shadow-md overflow-hidden">
+          <div class="bg-group1 text-white p-4">
+            <h3 class="font-bold text-lg flex items-center">
+              <i class="fa fa-users mr-2"></i>第一组
+            </h3>
+          </div>
+          <div class="p-4">
+            <div class="text-center mb-4 text-gray-500 text-sm">讲台</div>
+            <div id="group1" class="space-y-4">
+              <!-- 座位将动态生成 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 第二组 -->
+        <div class="group-card bg-white rounded-xl shadow-md overflow-hidden">
+          <div class="bg-group2 text-white p-4">
+            <h3 class="font-bold text-lg flex items-center">
+              <i class="fa fa-users mr-2"></i>第二组
+            </h3>
+          </div>
+          <div class="p-4">
+            <div class="text-center mb-4 text-gray-500 text-sm">讲台</div>
+            <div id="group2" class="space-y-4">
+              <!-- 座位将动态生成 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 第三组 -->
+        <div class="group-card bg-white rounded-xl shadow-md overflow-hidden">
+          <div class="bg-group3 text-white p-4">
+            <h3 class="font-bold text-lg flex items-center">
+              <i class="fa fa-users mr-2"></i>第三组
+            </h3>
+          </div>
+          <div class="p-4">
+            <div class="text-center mb-4 text-gray-500 text-sm">讲台</div>
+            <div id="group3" class="space-y-4">
+              <!-- 座位将动态生成 -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 操作反馈区 -->
+    <div id="notification" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-dark text-white px-6 py-3 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 flex items-center space-x-2">
+      <i class="fa fa-check-circle text-green-400"></i>
+      <span>座位已随机安排完成</span>
+    </div>
+  </main>
+
+  <!-- 使用说明模态框 -->
+  <div id="infoModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-white rounded-xl max-w-md w-full mx-4 p-6 transform scale-95 transition-transform duration-300">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold text-primary">使用说明</h3>
+        <button id="closeInfoBtn" class="text-gray-500 hover:text-gray-700">
+          <i class="fa fa-times text-xl"></i>
+        </button>
+      </div>
+      <div class="space-y-3 text-gray-700">
+        <p>1. 首次点击"随机排座位"将安排所有学生</p>
+        <p>2. 可勾选座位旁的复选框固定特定座位</p>
+        <p>3. 再次点击"随机排座位"时，固定座位保持不变，其他座位重新随机</p>
+        <p>4. 系统总共有24个座位，可容纳最多24名学生</p>
+      </div>
+      <div class="mt-6 text-center">
+        <button id="confirmInfoBtn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+          我知道了
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导入说明模态框 -->
+  <div id="importModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-white rounded-xl max-w-md w-full mx-4 p-6 transform scale-95 transition-transform duration-300">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold text-primary">导入名单说明</h3>
+        <button id="closeImportModal" class="text-gray-500 hover:text-gray-700">
+          <i class="fa fa-times text-xl"></i>
+        </button>
+      </div>
+      <div class="space-y-3 text-gray-700">
+        <p>1. 支持导入TXT或CSV格式的文件</p>
+        <p>2. 文件中每行包含一个学生姓名</p>
+        <p>3. 系统会自动替换当前的学生名单</p>
+        <p>4. 座位总数为24个，超过此数量的学生无法全部安排</p>
+      </div>
+      <div class="mt-6 text-center">
+        <button id="confirmImportBtn" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors">
+          我知道了
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 页脚 -->
+  <footer class="bg-white border-t py-6">
+    <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+      <p>学生座位排列系统 &copy; switch cin 2025</p>
+    </div>
+  </footer>
+
+  <script>
+    // 学生数据
+    let students = [
+      "林芷渲", "龚世杰", "林希", "方梓晨", "李艾丽西亚", "黄怡菲",
+      "杜紫英", "周黎凯", "黄梓琳", "李煜麒", "朱视娜", "陈昕妤",
+      "吴子怡", "王索菲娅", "胡语彤", "施俊怡", "王乐权", "黄琦彬",
+      "李俊航", "翁沛珊", "李欣妍", "关欣汝", "王梓涵"
+    ];
+
+    // 存储固定的座位信息 {seatId: studentName}
+    let fixedSeats = {};
+
+    // 总座位数
+    const totalSeats = 24;
+
+    // 标记是否是首次分配
+    let isFirstAssignment = true;
+
+    // 更新学生总数显示
+    document.getElementById('totalStudents').textContent = students.length;
+
+    // DOM元素
+    const arrangeBtn = document.getElementById('arrangeBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const mobileRefreshBtn = document.getElementById('mobileRefreshBtn');
+    const infoBtn = document.getElementById('infoBtn');
+    const mobileInfoBtn = document.getElementById('mobileInfoBtn');
+    const infoModal = document.getElementById('infoModal');
+    const closeInfoBtn = document.getElementById('closeInfoBtn');
+    const confirmInfoBtn = document.getElementById('confirmInfoBtn');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileMenu = document.getElementById('mobileMenu');
+    const notification = document.getElementById('notification');
+    const importBtn = document.getElementById('importBtn');
+    const mobileImportBtn = document.getElementById('mobileImportBtn');
+    const fileImport = document.getElementById('fileImport');
+    const importModal = document.getElementById('importModal');
+    const closeImportModal = document.getElementById('closeImportModal');
+    const confirmImportModal = document.getElementById('confirmImportBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const mobileExportBtn = document.getElementById('mobileExportBtn');
+
+    // 组容器
+    const group1 = document.getElementById('group1');
+    const group2 = document.getElementById('group2');
+    const group3 = document.getElementById('group3');
+
+    // 初始化座位框架
+    function initSeats() {
+      // 清空所有组
+      group1.innerHTML = '';
+      group2.innerHTML = '';
+      group3.innerHTML = '';
+
+      // 重置固定座位和首次分配标记
+      fixedSeats = {};
+      isFirstAssignment = true;
+
+      // 创建座位
+      for (let groupIndex = 0; groupIndex < 3; groupIndex++) {
+        const groupElement = groupIndex === 0 ? group1 : groupIndex === 1 ? group2 : group3;
+        const groupColor = groupIndex === 0 ? 'group1' : groupIndex === 1 ? 'group2' : 'group3';
+        const groupName = groupIndex === 0 ? '一' : groupIndex === 1 ? '二' : '三';
+
+        // 每组4行，每行2人
+        for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
+          const row = document.createElement('div');
+          row.className = 'flex justify-center gap-4';
+
+          for (let seatIndex = 0; seatIndex < 2; seatIndex++) {
+            const seatId = `${groupIndex}-${rowIndex}-${seatIndex}`;
+            const seatNumber = `${groupName}组${rowIndex+1}排${seatIndex+1}号`;
+
+            const seat = document.createElement('div');
+            seat.className = `seat-shadow relative bg-${groupColor}/10 border border-${groupColor}/30 text-${groupColor} rounded-lg p-3 w-full text-center font-medium transition-all duration-300 hover:bg-${groupColor}/20`;
+            seat.dataset.seat = seatId;
+
+            seat.innerHTML = `
+              <div class="seat-number">${seatNumber}</div>
+              <div class="seat-name py-4">等待分配</div>
+              <div class="mt-1 flex items-center justify-center text-xs text-gray-500">
+                <input type="checkbox" class="mr-1 fixed-seat-checkbox" data-seat="${seatId}">
+                <span>固定座位</span>
+              </div>
+            `;
+
+            row.appendChild(seat);
+
+            // 绑定固定座位事件
+            const checkbox = seat.querySelector('.fixed-seat-checkbox');
+            checkbox.addEventListener('change', function() {
+              const seatId = this.dataset.seat;
+              const seatElement = document.querySelector(`[data-seat="${seatId}"]`);
+              const nameElement = seatElement.querySelector('.seat-name');
+              const studentName = nameElement.textContent.trim();
+
+              if (this.checked) {
+                // 只有当座位有学生时才能固定
+                if (studentName && studentName !== '等待分配' && studentName !== '空座位') {
+                  fixedSeats[seatId] = studentName;
+                  seatElement.classList.remove(`border-${groupColor}/30`);
+                  seatElement.classList.add('border-fixed');
+                  seatElement.insertAdjacentHTML('beforeend', '<div class="fixed-seat-indicator"></div>');
+                } else {
+                  // 没有学生时无法固定，取消勾选
+                  this.checked = false;
+                  showNotification('请先分配学生再固定座位');
+                }
+              } else {
+                // 取消固定
+                delete fixedSeats[seatId];
+                seatElement.classList.remove('border-fixed');
+                seatElement.classList.add(`border-${groupColor}/30`);
+                const indicator = seatElement.querySelector('.fixed-seat-indicator');
+                if (indicator) indicator.remove();
+              }
+            });
+          }
+
+          groupElement.appendChild(row);
+        }
+      }
+    }
+
+    // 移动端菜单切换
+    mobileMenuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+
+    // 模态框控制
+    function showInfoModal() {
+      infoModal.classList.remove('opacity-0', 'pointer-events-none');
+      infoModal.querySelector('div').classList.remove('scale-95');
+      infoModal.querySelector('div').classList.add('scale-100');
+    }
+
+    function hideInfoModal() {
+      infoModal.classList.add('opacity-0', 'pointer-events-none');
+      infoModal.querySelector('div').classList.remove('scale-100');
+      infoModal.querySelector('div').classList.add('scale-95');
+    }
+
+    function showImportModal() {
+      importModal.classList.remove('opacity-0', 'pointer-events-none');
+      importModal.querySelector('div').classList.remove('scale-95');
+      importModal.querySelector('div').classList.add('scale-100');
+    }
+
+    function hideImportModal() {
+      importModal.classList.add('opacity-0', 'pointer-events-none');
+      importModal.querySelector('div').classList.remove('scale-100');
+      importModal.querySelector('div').classList.add('scale-95');
+    }
+
+    // 模态框事件绑定
+    infoBtn.addEventListener('click', showInfoModal);
+    mobileInfoBtn.addEventListener('click', () => {
+      showInfoModal();
+      mobileMenu.classList.add('hidden');
+    });
+    closeInfoBtn.addEventListener('click', hideInfoModal);
+    confirmInfoBtn.addEventListener('click', hideInfoModal);
+
+    importBtn.addEventListener('click', showImportModal);
+    mobileImportBtn.addEventListener('click', () => {
+      showImportModal();
+      mobileMenu.classList.add('hidden');
+    });
+    closeImportModal.addEventListener('click', hideImportModal);
+    confirmImportModal.addEventListener('click', hideImportModal);
+
+    // 随机洗牌算法
+    function shuffleArray(array) {
+      const newArray = [...array];
+      for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+      }
+      return newArray;
+    }
+
+    // 检查是否所有学生都已分配
+    function verifyAllStudentsAssigned(assignedStudents) {
+      // 检查是否有学生未被分配
+      const unassigned = students.filter(student => !assignedStudents.includes(student));
+
+      if (unassigned.length > 0) {
+        console.warn(`以下学生未被分配: ${unassigned.join(', ')}`);
+        return false;
+      }
+      return true;
+    }
+
+    // 核心功能：分配座位（首次分配确保所有学生都到位）
+    function arrangeSeats() {
+      // 1. 收集所有座位ID
+      const allSeats = [];
+      document.querySelectorAll('[data-seat]').forEach(seat => {
+        allSeats.push(seat.dataset.seat);
+      });
+
+      // 2. 首次分配逻辑：不考虑固定座位，分配所有学生
+      if (isFirstAssignment) {
+        // 打乱所有学生
+        const shuffledStudents = shuffleArray([...students]);
+
+        // 准备最终分配列表
+        let finalAssignment = [...shuffledStudents];
+
+        // 如果学生不足24人，补充空座位
+        if (finalAssignment.length < totalSeats) {
+          const needEmpty = totalSeats - finalAssignment.length;
+          finalAssignment = [...finalAssignment, ...Array(needEmpty).fill('空座位')];
+        }
+
+        // 分配到所有座位
+        allSeats.forEach((seatId, index) => {
+          const [groupIndex] = seatId.split('-').map(Number);
+          const groupColor = groupIndex === 0 ? 'group1' : groupIndex === 1 ? 'group2' : 'group3';
+
+          const seatElement = document.querySelector(`[data-seat="${seatId}"]`);
+          if (seatElement) {
+            // 添加动画
+            seatElement.classList.remove('animate-seat');
+            void seatElement.offsetWidth; // 触发重绘
+            seatElement.classList.add('animate-seat');
+            seatElement.style.animationDelay = `${index * 30}ms`;
+
+            // 设置学生姓名
+            const nameElement = seatElement.querySelector('.seat-name');
+            const studentName = finalAssignment[index] || '空座位';
+            nameElement.textContent = studentName;
+            nameElement.className = `seat-name py-4 ${studentName === '空座位' ? 'text-gray-400 italic' : ''}`;
+          }
+        });
+
+        // 标记为非首次分配
+        isFirstAssignment = false;
+        showNotification(`首次分配完成，共安排 ${students.length} 名学生`);
+        return;
+      }
+
+      // 3. 非首次分配：考虑固定座位
+      // 收集所有固定座位的学生
+      const fixedStudentNames = Object.values(fixedSeats);
+      const fixedSeatIds = Object.keys(fixedSeats);
+      const numFixedSeats = fixedSeatIds.length;
+
+      // 计算可用学生：所有学生 - 固定学生
+      const availableStudents = students.filter(student => !fixedStudentNames.includes(student));
+      const numAvailableStudents = availableStudents.length;
+
+      // 筛选非固定座位
+      const nonFixedSeats = allSeats.filter(seatId => !fixedSeatIds.includes(seatId));
+      const numNonFixedSeats = nonFixedSeats.length;
+
+      // 检查学生是否超过座位容量
+      if (students.length > totalSeats) {
+        showNotification(`警告：学生数量(${students.length})超过座位总数(${totalSeats})，部分学生无法安排`);
+      }
+
+      // 准备待分配的学生列表
+      let shuffledAvailable = shuffleArray([...availableStudents]);
+
+      // 准备最终分配列表：确保所有可用学生都被分配
+      let finalAssignment = [...shuffledAvailable];
+
+      // 如果还有剩余座位，补充空座位
+      if (finalAssignment.length < numNonFixedSeats) {
+        const needEmpty = numNonFixedSeats - finalAssignment.length;
+        finalAssignment = [...finalAssignment, ...Array(needEmpty).fill('空座位')];
+      }
+
+      // 分配学生到非固定座位
+      nonFixedSeats.forEach((seatId, index) => {
+        const [groupIndex] = seatId.split('-').map(Number);
+        const groupColor = groupIndex === 0 ? 'group1' : groupIndex === 1 ? 'group2' : 'group3';
+
+        const seatElement = document.querySelector(`[data-seat="${seatId}"]`);
+        if (seatElement) {
+          // 添加动画
+          seatElement.classList.remove('animate-seat');
+          void seatElement.offsetWidth; // 触发重绘
+          seatElement.classList.add('animate-seat');
+          seatElement.style.animationDelay = `${index * 30}ms`;
+
+          // 设置学生姓名
+          const nameElement = seatElement.querySelector('.seat-name');
+          const studentName = finalAssignment[index] || '空座位';
+          nameElement.textContent = studentName;
+          nameElement.className = `seat-name py-4 ${studentName === '空座位' ? 'text-gray-400 italic' : ''}`;
+        }
+      });
+
+      // 确保固定座位的学生保持不变
+      fixedSeatIds.forEach(seatId => {
+        const seatElement = document.querySelector(`[data-seat="${seatId}"] .seat-name`);
+        if (seatElement) {
+          seatElement.textContent = fixedSeats[seatId];
+          seatElement.className = 'seat-name py-4';
+        }
+      });
+
+      // 验证所有学生都已分配
+      const allAssigned = [...fixedStudentNames, ...finalAssignment.filter(name => name !== '空座位')];
+      const allAssignedSuccessfully = verifyAllStudentsAssigned(allAssigned);
+
+      if (allAssignedSuccessfully) {
+        showNotification(`座位已重新安排，共安排 ${students.length} 名学生`);
+      } else {
+        showNotification(`座位安排完成，但部分学生未被分配（学生数: ${students.length}, 座位数: ${totalSeats}）`);
+      }
+    }
+
+    // 重置功能
+    function resetSeats() {
+      initSeats();
+      showNotification('已重置，可以重新安排座位');
+    }
+
+    // 显示通知
+    function showNotification(message) {
+      const notificationEl = document.getElementById('notification');
+      notificationEl.querySelector('span').textContent = message;
+      notificationEl.classList.remove('opacity-0');
+
+      setTimeout(() => {
+        notificationEl.classList.add('opacity-0');
+      }, 3000);
+    }
+
+    // 导入学生名单
+    function importStudents(content) {
+      const newStudents = content.split('\n')
+        .map(name => name.trim())
+        .filter(name => name);
+
+      if (newStudents.length > 0) {
+        students = newStudents;
+        document.getElementById('totalStudents').textContent = students.length;
+
+        const studentList = document.querySelector('.grid.grid-cols-2');
+        studentList.innerHTML = '';
+
+        students.forEach(student => {
+          const studentEl = document.createElement('div');
+          studentEl.className = 'student-item bg-light rounded-lg p-2 text-center text-sm border border-gray-200 hover:border-primary/50 transition-colors';
+          studentEl.textContent = student;
+          studentList.appendChild(studentEl);
+        });
+
+        // 提示学生数量和座位数量的关系
+        if (students.length > totalSeats) {
+          showNotification(`注意：导入了 ${students.length} 名学生，超过总座位数(${totalSeats})，部分学生无法安排`);
+        } else {
+          showNotification(`成功导入 ${students.length} 名学生`);
+        }
+
+        resetSeats();
+      } else {
+        showNotification('导入失败，文件内容为空');
+      }
+    }
+
+    // 处理文件导入
+    fileImport.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        importStudents(event.target.result);
+      };
+      reader.readAsText(file);
+      fileImport.value = '';
+    });
+
+    // 导出座位为PNG
+    function exportAsPNG() {
+      const seatSection = document.querySelector('section.mb-8:nth-of-type(2)');
+
+      if (!seatSection) {
+        showNotification('没有可导出的座位信息');
+        return;
+      }
+
+      showNotification('正在准备导出...');
+
+      html2canvas(seatSection, {
+        scale: 2,
+        useCORS: true,
+        logging: false
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `座位安排_${new Date().toLocaleDateString()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        showNotification('座位安排已导出为PNG');
+      }).catch(err => {
+        console.error('导出失败:', err);
+        showNotification('导出失败，请重试');
+      });
+    }
+
+    // 事件监听
+    arrangeBtn.addEventListener('click', arrangeSeats);
+    refreshBtn.addEventListener('click', resetSeats);
+    mobileRefreshBtn.addEventListener('click', () => {
+      resetSeats();
+      mobileMenu.classList.add('hidden');
+    });
+
+    exportBtn.addEventListener('click', exportAsPNG);
+    mobileExportBtn.addEventListener('click', () => {
+      exportAsPNG();
+      mobileMenu.classList.add('hidden');
+    });
+
+    // 页面加载时初始化
+    window.addEventListener('load', () => {
+      initSeats();
+      setTimeout(showInfoModal, 500);
+    });
+  </script>
+</body>
+</html>
